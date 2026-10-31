@@ -1,0 +1,45 @@
+{
+  "name": "pinpoint",
+  "version": "0.1.0",
+  "description": "Draw on anything. Screen annotation overlay for Linux.",
+  "main": "dist/main.js",
+  "private": true,
+  "scripts": {
+    "build": "bun build src/main.ts src/preload.ts --target node --format cjs --external electron --outdir dist && bun build src/overlay.ts src/shots.ts --target browser --outdir dist",
+    "start": "bun run build && electron .",
+    "test": "bun test",
+    "dist": "bun run build && electron-builder --linux AppImage",
+    "install-app": "bun run dist && mkdir -p ~/Applications && cp release/Pinpoint.AppImage ~/Applications/.Pinpoint.AppImage.new && mv -f ~/Applications/.Pinpoint.AppImage.new ~/Applications/Pinpoint.AppImage"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.4",
+    "@types/node": "^26.6.6",
+    "electron": "38",
+    "electron-builder": "^26.18.0",
+    "typescript": "^7.0.2"
+  },
+  "author": "Don",
+  "build": {
+    "appId": "online.pinpoint.app",
+    "productName": "Pinpoint",
+    "files": [
+      "dist/**",
+      "static/**",
+      "package.json"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "static/icon.png",
+      "category": "Graphics",
+      "artifactName": "Pinpoint.AppImage",
+      "desktop": {
+        "entry": {
+          "Comment": "Draw on anything. Screen annotation overlay."
+        }
+      }
+    }
+  }
+}

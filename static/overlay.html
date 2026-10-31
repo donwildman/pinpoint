@@ -1,0 +1,140 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' file: data:; style-src 'self' 'unsafe-inline'">
+<title>Pinpoint</title>
+<style>
+  :root {
+    --bar: rgba(30, 30, 33, 0.94);
+    --line: rgba(255, 255, 255, 0.09);
+    --ink: #f2f2f4;
+    --dim: #9a9aa2;
+    --hot: rgba(255, 255, 255, 0.14);
+    --accent: #ff3b30;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: transparent; font: 13px/1.3 Inter, "Noto Sans", system-ui, sans-serif; color: var(--ink); user-select: none; }
+  canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; cursor: crosshair; }
+  body.editor { background: #232326; }
+
+  .bar {
+    position: fixed; top: 14px; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 2px; padding: 5px 6px;
+    background: var(--bar); border: 1px solid var(--line); border-radius: 14px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), 0 1px 0 rgba(255, 255, 255, 0.05) inset;
+  }
+  .bar.moved { transform: none; }
+  .grip { width: 10px; height: 26px; cursor: grab; margin-right: 2px; background: radial-gradient(circle, #666 1px, transparent 1.5px) 0 0 / 5px 5px; opacity: .8; }
+  .sep { width: 1px; height: 22px; background: var(--line); margin: 0 5px; }
+  button {
+    all: unset; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 8px; cursor: default; color: var(--ink); position: relative;
+  }
+  button:hover { background: var(--hot); }
+  button.on { background: var(--ink); color: #1c1c1e; }
+  button svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  button[data-tip]:hover::after {
+    content: attr(data-tip); position: absolute; top: 38px; left: 50%; transform: translateX(-50%); white-space: nowrap;
+    background: #000; color: #fff; padding: 4px 7px; border-radius: 6px; font-size: 11.5px; pointer-events: none;
+  }
+  .swatch { width: 22px; height: 22px; }
+  .swatch i { width: 14px; height: 14px; border-radius: 50%; display: block; box-shadow: 0 0 0 1px rgba(255,255,255,.25) inset; }
+  .swatch.on { background: transparent; box-shadow: 0 0 0 2px var(--ink) inset; border-radius: 50%; }
+  .size i { display: block; background: currentColor; border-radius: 50%; }
+  .pages { display: flex; gap: 3px; }
+  .pages button { width: 26px; height: 26px; font-size: 11.5px; font-weight: 600; color: var(--dim); border: 1px solid var(--line); }
+  .pages button.on { color: #1c1c1e; }
+  .pages button.white { box-shadow: 0 -2px 0 #fafaf7 inset; }
+  .pages button.black { box-shadow: 0 -2px 0 #35503f inset; }
+
+  .menu { position: absolute; top: 44px; right: 0; background: var(--bar); border: 1px solid var(--line); border-radius: 10px; padding: 5px; display: none; min-width: 170px; }
+  .menu.open { display: block; }
+  .menu div { padding: 7px 10px; border-radius: 6px; display: flex; justify-content: space-between; gap: 16px; }
+  .menu div:hover { background: var(--hot); }
+  .menu kbd, .help kbd { color: var(--dim); font: inherit; }
+
+  .tools { display: flex; align-items: center; gap: 2px; }
+  /* While pinned the whole window is click-through, so its bar lives in a window of its own (pinbar.html). */
+  body.is-pinned .bar { display: none; }
+
+  textarea.text-input {
+    position: fixed; background: transparent; border: 1px dashed rgba(127,127,127,.7); outline: none; resize: none; overflow: hidden;
+    font-weight: 600; font-family: Inter, "Noto Sans", "DejaVu Sans", sans-serif; line-height: 1.3; padding: 0; margin: 0; min-width: 40px; white-space: pre;
+  }
+  .help {
+    position: fixed; inset: 0; margin: auto; width: 560px; height: fit-content; display: none; columns: 2; column-gap: 28px;
+    background: var(--bar); border: 1px solid var(--line); border-radius: 16px; padding: 20px 24px; box-shadow: 0 20px 60px rgba(0,0,0,.5);
+  }
+  .help.open { display: block; }
+  .help h3 { margin: 0 0 6px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); column-span: all; }
+  .help div { display: flex; justify-content: space-between; padding: 3px 0; break-inside: avoid; }
+  .flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; transition: opacity .35s; }
+  .flash.go { opacity: .5; transition: none; }
+  .toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); background: var(--bar); border: 1px solid var(--line); padding: 8px 14px; border-radius: 10px; opacity: 0; transition: opacity .3s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<canvas></canvas>
+
+<div class="bar" id="bar">
+  <div class="grip" id="grip"></div>
+  <div class="tools">
+    <button data-tool="pen" data-tip="Pen  P"><svg viewBox="0 0 24 24"><path d="M4 20l4.5-1L19 8.5 15.5 5 5 15.5z"/><path d="M13.5 7l3.5 3.5"/></svg></button>
+    <button data-tool="highlight" data-tip="Highlighter  H"><svg viewBox="0 0 24 24"><path d="M9 14l-5 5h6l2-2"/><path d="M8 13l3 3 9-9-3-3z"/></svg></button>
+    <button data-tool="arrow" data-tip="Arrow  A"><svg viewBox="0 0 24 24"><path d="M5 19L18 6M10 6h8v8"/></svg></button>
+    <button data-tool="line" data-tip="Line  I"><svg viewBox="0 0 24 24"><path d="M5 19L19 5"/></svg></button>
+    <button data-tool="rect" data-tip="Rectangle  R"><svg viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="1.5"/></svg></button>
+    <button data-tool="ellipse" data-tip="Ellipse  O"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="8.5" ry="6.5"/></svg></button>
+    <button data-tool="text" data-tip="Text  T"><svg viewBox="0 0 24 24"><path d="M5 7V5h14v2M12 5v14M9 19h6"/></svg></button>
+    <button data-tool="step" data-tip="Numbered steps  N"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M10.5 9.5l2-1.5v8"/></svg></button>
+    <button data-tool="laser" data-tip="Laser pointer  L"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.5" fill="currentColor"/><circle cx="12" cy="12" r="7" opacity=".45"/></svg></button>
+    <button data-tool="eraser" data-tip="Eraser  E"><svg viewBox="0 0 24 24"><path d="M8 20h12M4.5 15.5l9-9 5 5-7.5 7.5H7z"/><path d="M9 11l5 5"/></svg></button>
+    <button data-tool="crop" data-tip="Crop  C" class="edit-only"><svg viewBox="0 0 24 24"><path d="M6 2v14h14M2 6h14v14"/></svg></button>
+    <div class="sep"></div>
+    <div id="colors" style="display:flex"></div>
+    <div class="sep"></div>
+    <button class="size" data-size="1" data-tip="Thin  ["><i style="width:5px;height:5px"></i></button>
+    <button class="size" data-size="2" data-tip="Medium"><i style="width:8px;height:8px"></i></button>
+    <button class="size" data-size="3" data-tip="Thick  ]"><i style="width:12px;height:12px"></i></button>
+    <div class="sep"></div>
+    <button data-act="undo" data-tip="Undo  Ctrl Z"><svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 010 11H11"/></svg></button>
+    <button data-act="redo" data-tip="Redo  Ctrl Shift Z"><svg viewBox="0 0 24 24"><path d="M15 14l5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 000 11H13"/></svg></button>
+    <button data-act="clear" data-tip="Clear page  Delete"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg></button>
+    <div class="sep screen-only"></div>
+    <div class="pages screen-only" id="pages"></div>
+    <div class="screen-only" style="position:relative">
+      <button data-act="newpage" data-tip="New page"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+      <div class="menu" id="newmenu">
+        <div data-new="screen">Screen page <kbd>swipe ←</kbd></div>
+        <div data-new="white">Whiteboard <kbd>W</kbd></div>
+        <div data-new="black">Blackboard <kbd>K</kbd></div>
+      </div>
+    </div>
+    <div class="sep"></div>
+    <button data-act="pin" data-tip="Pin marks, click through  F" class="screen-only"><svg viewBox="0 0 24 24"><path d="M12 16v6M8 3h8l-1 6 3 4H6l3-4z"/></svg></button>
+    <button data-act="shot" data-tip="Screenshot  S" class="screen-only"><svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.2"/></svg></button>
+    <button data-act="save" data-tip="Save  Ctrl S" class="edit-only"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></button>
+    <button data-act="help" data-tip="Shortcuts  ?"><svg viewBox="0 0 24 24"><path d="M9.5 9a2.5 2.5 0 115 .5c0 1.8-2.5 2-2.5 4M12 17.5v.01"/></svg></button>
+    <button data-act="close" data-tip="Close  Esc"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </div>
+</div>
+
+<div class="help" id="help">
+  <h3>Tools</h3>
+  <div>Pen <kbd>P</kbd></div><div>Highlighter <kbd>H</kbd></div><div>Arrow <kbd>A</kbd></div><div>Line <kbd>I</kbd></div>
+  <div>Rectangle <kbd>R</kbd></div><div>Ellipse <kbd>O</kbd></div><div>Text <kbd>T</kbd></div><div>Numbered steps <kbd>N</kbd></div>
+  <div>Laser pointer <kbd>L</kbd></div><div>Eraser <kbd>E</kbd></div><div>Colours <kbd>1–8</kbd></div><div>Stroke size <kbd>[ ]</kbd></div>
+  <div>Straight line / square <kbd>Shift</kbd></div><div>From the centre <kbd>Alt</kbd></div>
+  <h3>Actions</h3>
+  <div>Undo / Redo <kbd>Ctrl Z / Ctrl ⇧ Z</kbd></div><div>Clear page <kbd>Delete</kbd></div>
+  <div>Screenshot <kbd>S</kbd></div><div>Pin, click through <kbd>F</kbd></div>
+  <div>Whiteboard <kbd>W</kbd></div><div>Blackboard <kbd>K</kbd></div><div>Next / prev page <kbd>PgDn / PgUp</kbd></div>
+  <div>Fit everything <kbd>⇧ 1</kbd></div><div>Pan / zoom <kbd>scroll / Ctrl scroll</kbd></div>
+  <div>Close and clear <kbd>Esc</kbd></div>
+</div>
+<div class="flash" id="flash"></div>
+<div class="toast" id="toast"></div>
+<script src="../dist/overlay.js"></script>
+</body>
+</html>

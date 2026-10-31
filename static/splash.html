@@ -1,0 +1,53 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Pinpoint</title>
+<style>
+  @font-face { font-family: Montserrat; src: url(fonts/Montserrat.ttf); font-weight: 100 900; }
+  html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; user-select: none; }
+  body { display: grid; place-items: center; font-family: Montserrat, sans-serif; cursor: default; }
+  .card {
+    width: 560px; height: 330px; box-sizing: border-box; padding: 0 48px; border-radius: 22px; position: relative;
+    display: flex; align-items: center; gap: 22px; color: #f4f2ee;
+    background: radial-gradient(120% 140% at 15% 0%, #2c2c31 0%, #18181b 60%);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, .45), inset 0 0 0 1px rgba(255, 255, 255, .06);
+    opacity: 0; transform: translateY(8px) scale(.98); transition: opacity .3s ease, transform .3s ease;
+  }
+  .card.in { opacity: 1; transform: none; }
+  .card.out { opacity: 0; transform: scale(.98); transition-duration: .4s; }
+  .card img { width: 170px; height: 170px; flex: none; }
+  .name { font-size: 46px; font-weight: 800; letter-spacing: -.02em; }
+  .tag { font-size: 17px; font-weight: 500; color: #b9b6b0; margin-top: 4px; }
+  .hint { position: absolute; left: 48px; bottom: 26px; font-size: 13px; font-weight: 600; color: #8d8a85; display: flex; gap: 6px; align-items: center; }
+  .k { background: #2f2f34; border: 1px solid #45454b; border-radius: 5px; padding: 2px 7px; color: #e6e3dd; }
+  .ver { position: absolute; right: 26px; bottom: 26px; font-size: 12px; font-weight: 600; color: #5f5d59; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <img src="mark.svg" alt="">
+    <div>
+      <div class="name">Pinpoint</div>
+      <div class="tag">Draw on anything.</div>
+    </div>
+    <div class="hint"></div>
+    <div class="ver"></div>
+  </div>
+<script>
+  const card = document.querySelector('.card');
+  const q = new URLSearchParams(location.search);
+  document.querySelector('.ver').textContent = 'v' + q.get('v');
+  const hint = document.querySelector('.hint');
+  q.get('key').split('+').forEach((k, i) => {
+    if (i) hint.append('+');
+    hint.append(Object.assign(document.createElement('span'), { className: 'k', textContent: k }));
+  });
+  hint.append('  to start drawing');
+  const leave = () => { card.classList.add('out'); setTimeout(() => window.close(), 400); };
+  document.fonts.ready.then(() => requestAnimationFrame(() => card.classList.add('in')));
+  setTimeout(leave, 2400);
+  addEventListener('click', leave);
+</script>
+</body>
+</html>

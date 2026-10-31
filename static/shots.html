@@ -1,0 +1,28 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' file:; style-src 'self' 'unsafe-inline'">
+<title>Pinpoint Screenshots</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: transparent; font: 12px/1.3 Inter, "Noto Sans", system-ui, sans-serif; color: #f2f2f4; user-select: none; overflow: hidden; }
+  #stack { display: flex; flex-direction: column; gap: 10px; padding: 4px; }
+  .card { position: relative; border-radius: 12px; overflow: hidden; background: #1e1e21; border: 1px solid rgba(255,255,255,.1); box-shadow: 0 8px 24px rgba(0,0,0,.4); }
+  .card img { display: block; width: 100%; max-height: 160px; object-fit: cover; object-position: top; cursor: grab; }
+  .actions { position: absolute; inset: auto 0 0 0; display: flex; gap: 4px; padding: 6px; background: linear-gradient(transparent, rgba(0,0,0,.75)); opacity: 0; transition: opacity .15s; }
+  .card:hover .actions { opacity: 1; }
+  button { all: unset; padding: 4px 9px; border-radius: 7px; background: rgba(40,40,44,.92); border: 1px solid rgba(255,255,255,.12); font-weight: 600; }
+  button:hover { background: #fff; color: #1c1c1e; }
+  .x { position: absolute; top: 6px; right: 6px; width: 20px; height: 20px; padding: 0; display: grid; place-items: center; border-radius: 50%; opacity: 0; }
+  .card:hover .x { opacity: 1; }
+  .done { position: absolute; top: 6px; left: 6px; padding: 3px 8px; border-radius: 6px; background: #34c759; color: #052; font-weight: 700; opacity: 0; transition: opacity .2s; }
+  .done.show { opacity: 1; }
+  .folder { align-self: flex-end; color: #c8c8cc; font-size: 11px; padding: 3px 9px; }
+</style>
+</head>
+<body>
+<div id="stack"></div>
+<script src="../dist/shots.js"></script>
+</body>
+</html>
