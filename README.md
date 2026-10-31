@@ -1,8 +1,17 @@
 # Pinpoint
 
+![Pinpoint](docs/splash.png)
+
 Draw on anything on your Linux screen. Press **Alt+Shift+A** and a transparent canvas covers the display under your cursor; press **Esc** and it's gone.
 
 A Linux take on the macOS app Lasso (Electron + TypeScript, X11). Lives in the system tray.
+
+## Download
+
+**[Download Pinpoint.AppImage](https://github.com/donwildman/pinpoint/releases/latest/download/Pinpoint.AppImage)** (latest release, about 115 MB; needs libfuse2)
+
+    chmod +x Pinpoint.AppImage
+    ./Pinpoint.AppImage
 
 ## Run
 
